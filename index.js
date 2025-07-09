@@ -82,7 +82,7 @@ async function run() {
 
     console.log(" You successfully connected to MongoDB!");
   } catch (error) {
-    console.error("MongoDB connection failed:", error);
+    console.error("MongoDB connection failed ", error);
   }
 }
 
