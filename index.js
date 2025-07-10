@@ -71,8 +71,8 @@ app.post('/add_products_data', async (req, res) => {
   try {
       const product = req.body;
 
-        product.status = "pending";     // default status
-    product.upvotes = 0;            // default vote count
+        product.status = "pending";     
+    product.upvotes = 0;           
 
       console.log(product)
     const result = await productsCollection.insertOne(product);
@@ -84,7 +84,7 @@ app.post('/add_products_data', async (req, res) => {
 });
       // get products
       
-      
+
      app.get('/add_products_data', async (req, res) => {
   try {
     const getProducts = await productsCollection.find({}).toArray();
@@ -92,6 +92,21 @@ app.post('/add_products_data', async (req, res) => {
   } catch (error) {
     console.error("Error getting products:", error);
     res.status(500).send({ message: "Server Error", error: error.message });
+  }
+});
+
+
+      // DELETE a product by ID
+      
+app.delete('/add_products_data/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await productsCollection.deleteOne(query);
+    res.send(result);
+  } catch (err) {
+    console.error("Error deleting product:", err);
+    res.status(500).send({ error: "Failed to delete product" });
   }
 });
 
