@@ -1,6 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 
 const app = express();
@@ -24,15 +24,29 @@ async function run() {
     await client.connect();
 
     const db = client.db("products");
+    const all_Products = db.collection("featured_Products");
     const featured_Products = db.collection("featured_Products");
-    const trending_products = db.collection("trending_products");
 
+      //  All Products Route
+      
+    app.get("/all_products", async (req, res) => {
+      try {
+        const result = await all_Products.find().toArray();
+        res.send(result);
+      } catch (err) {
+        console.error("Error fetching all_products:", err);
+        res.status(500).send({ message: "Failed to fetch all products" });
+      }
+    });
+
+      //  Featured Products Route
+      
     app.get("/featured_products", async (req, res) => {
       try {
         const result = await featured_Products
           .find({})
           .sort({ timestamp: -1 })
-          .limit(7)
+          .limit(8)
           .toArray();
         res.json(result);
       } catch (err) {
@@ -40,33 +54,42 @@ async function run() {
       }
     });
 
+      // Trending Products Route
+      
     app.get("/trending_products", async (req, res) => {
-      const trending = await featured_Products
-        .find({})
-        .sort({ votes: -1 })
-        .limit(8)
-        .toArray();
-      res.send(trending);
+      try {
+        const trending = await featured_Products
+          .find({})
+          .sort({ votes: -1 })
+          .limit(8)
+          .toArray();
+        res.send(trending);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to fetch trending products" });
+      }
     });
 
+      //  Upvote Route
+      
     app.patch("/featured_products/upvote/:id", async (req, res) => {
       try {
         const productId = req.params.id;
         const { userId } = req.body;
 
-        // Check if user already voted
-        const product = await featured_Products.findOne({ _id: productId });
+        const product = await featured_Products.findOne({
+          _id: new ObjectId(productId),
+        });
 
         if (!product) {
           return res.status(404).json({ message: "Product not found" });
         }
 
         if (product.upvotedUsers?.includes(userId)) {
-          return res.status(400).json({ message: "You already voted" });
+          return res.status(400).json({ message: "Already voted" });
         }
 
         const result = await featured_Products.updateOne(
-          { _id: productId },
+          { _id: new ObjectId(productId) },
           {
             $inc: { votes: 1 },
             $push: { upvotedUsers: userId },
@@ -74,22 +97,23 @@ async function run() {
         );
 
         res.send({ success: true, updated: result.modifiedCount > 0 });
-      } catch (error) {
-        console.error("Upvote error:", error);
+      } catch (err) {
+        console.error("Upvote error:", err);
         res.status(500).json({ message: "Upvote failed" });
       }
     });
 
-    console.log(" You successfully connected to MongoDB!");
+    console.log(" Successfully connected to MongoDB");
   } catch (error) {
-    console.error("MongoDB connection failed ", error);
+    console.error(" MongoDB connection failed", error);
   }
 }
 
-run();
+run().catch((err) => console.error(" MongoDB Run Error:", err));
 
+// Default Route
 app.get("/", (req, res) => {
-  res.send("Server Running on Port 5000");
+  res.send(" Server is running on port 5000");
 });
 
 app.listen(port, () => {
