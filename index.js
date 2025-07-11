@@ -23,8 +23,10 @@ async function run() {
   try {
     await client.connect();
     const db = client.db("products");
-      const featured_Products = db.collection("featured_Products");
-      const productsCollection = db.collection('productsCollection')
+    const featured_Products = db.collection("featured_Products");
+    const productsCollection = db.collection("productsCollection");
+    const reviewsCollection = db.collection("reviewsCollection");
+    const reportedProductsCollection = db.collection("reportedProductsCollection")
 
     // All Products Route
     app.get("/all_products", async (req, res) => {
@@ -64,56 +66,53 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch trending products" });
       }
     });
-//
+    //
 
-// add-products data 
-app.post('/add_products_data', async (req, res) => {
-  try {
-      const product = req.body;
+    // add-products data
+    app.post("/add_products_data", async (req, res) => {
+      try {
+        const product = req.body;
 
-        product.status = "pending";     
-    product.upvotes = 0;           
+        product.status = "pending";
+        product.upvotes = 0;
 
-      console.log(product)
-    const result = await productsCollection.insertOne(product);
-    res.send(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({ error: "Failed to insert product" });
-  }
-});
-      // get products
-      
+        console.log(product);
+        const result = await productsCollection.insertOne(product);
+        res.send(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ error: "Failed to insert product" });
+      }
+    });
+    // get products
 
-     app.get('/add_products_data', async (req, res) => {
-  try {
-    const getProducts = await productsCollection.find({}).toArray();
-    res.send(getProducts);
-  } catch (error) {
-    console.error("Error getting products:", error);
-    res.status(500).send({ message: "Server Error", error: error.message });
-  }
-});
+    app.get("/add_products_data", async (req, res) => {
+      try {
+        const getProducts = await productsCollection.find({}).toArray();
+        res.send(getProducts);
+      } catch (error) {
+        console.error("Error getting products:", error);
+        res.status(500).send({ message: "Server Error", error: error.message });
+      }
+    });
 
+    // DELETE a product by ID
 
-      // DELETE a product by ID
-      
-app.delete('/add_products_data/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-    const result = await productsCollection.deleteOne(query);
-    res.send(result);
-  } catch (err) {
-    console.error("Error deleting product:", err);
-    res.status(500).send({ error: "Failed to delete product" });
-  }
-});
-
+    app.delete("/add_products_data/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await productsCollection.deleteOne(query);
+        res.send(result);
+      } catch (err) {
+        console.error("Error deleting product:", err);
+        res.status(500).send({ error: "Failed to delete product" });
+      }
+    });
 
     //update products data
-    
-     app.put("/add_products_data/:id", async (req, res) => {
+
+    app.put("/add_products_data/:id", async (req, res) => {
       const id = req.params.id;
       const updatedProduct = req.body;
 
@@ -136,12 +135,54 @@ app.delete('/add_products_data/:id', async (req, res) => {
       }
     });
 
+    // reviews data
+
+    app.post("/reviews", async (req, res) => {
+      try {
+        const review = req.body;
+        console.log(review);
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+      } catch (err) {
+        console.log("Error inserting review", err);
+        res.status(500).send({ error: "Failed to insert review" });
+      }
+    });
+
+
+    //reported products
+    
+    
+    
+    app.post("/reported", async (req, res) => {
+      try {
+        const review = req.body;
+        console.log(review);
+        const result = await reportedProductsCollection.insertOne(review);
+        res.send(result);
+      } catch (err) {
+        console.log("Error inserting review", err);
+        res.status(500).send({ error: "Failed to insert review" });
+      }
+    });
+
+
+
+
+    app.get("/reported", async (req, res) => {
+      try {
+        const getProducts = await reportedProductsCollection.find({}).toArray();
+        res.send(getProducts);
+      } catch (error) {
+        console.error("Error getting products:", error);
+        res.status(500).send({ message: "Server Error", error: error.message });
+      }
+    });
 
 
 
 
 
-      
 
     // Upvote Route
     app.patch("/featured_products/upvote/:id", async (req, res) => {
