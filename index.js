@@ -111,6 +111,30 @@ app.delete('/add_products_data/:id', async (req, res) => {
 });
 
 
+    //update products data
+    
+     app.put("/add_products_data/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedProduct = req.body;
+
+      try {
+        const result = await productsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              "data.name": updatedProduct.data.name,
+              "data.image": updatedProduct.data.image,
+              status: updatedProduct.status,
+            },
+          }
+        );
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating product:", error);
+        res.status(500).send({ error: "Failed to update product." });
+      }
+    });
 
 
 
