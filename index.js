@@ -1,4 +1,5 @@
 require("dotenv").config();
+
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
@@ -166,6 +167,31 @@ async function run() {
       }
     });
 
+
+
+//  delete route
+
+app.delete("/reported/:id", async (req, res) => {
+  const reportId = req.params.id;
+  console.log("delete request for id:", reportId);
+
+  if (!ObjectId.isValid(reportId)) {
+    return res.status(400).json({ success: false, error: "Invalid Report ID" });
+  }
+
+  try {
+    const result = await reportedProductsCollection.deleteOne({ _id: new ObjectId(reportId) });
+
+    if (result.deletedCount === 1) {
+      res.json({ success: true, message: "Report deleted successfully" });
+    } else {
+      res.status(404).json({ success: false, error: "Report not found" });
+    }
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({ success: false, error: "Internal Server Error" });
+  }
+});
 
 
 
