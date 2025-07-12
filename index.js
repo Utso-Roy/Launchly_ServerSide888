@@ -170,28 +170,36 @@ async function run() {
 
 
 //  delete route
-
-app.delete("/reported/:id", async (req, res) => {
-  const reportId = req.params.id;
-  console.log("delete request for id:", reportId);
-
-  if (!ObjectId.isValid(reportId)) {
-    return res.status(400).json({ success: false, error: "Invalid Report ID" });
-  }
-
+app.delete("/reported", async (req, res) => {
   try {
-    const result = await reportedProductsCollection.deleteOne({ _id: new ObjectId(reportId) });
+    // Step 1: Delete from reportedProductsCollection where isFeatured: true
+    const reportedDeleteResult = await reportedProductsCollection.deleteOne({ isFeatured: true });
 
-    if (result.deletedCount === 1) {
-      res.json({ success: true, message: "Report deleted successfully" });
+    // Step 2: Delete from featured_Products where isFeatured: true
+    const productDeleteResult = await featured_Products.deleteOne({ isFeatured: true });
+
+    const success =
+      reportedDeleteResult.deletedCount > 0 || productDeleteResult.deletedCount > 0;
+
+    if (success) {
+      res.json({
+        success: true,
+        message: "Deleted from one or both collections based on isFeatured",
+        reportedDeleted: reportedDeleteResult.deletedCount,
+        featuredDeleted: productDeleteResult.deletedCount,
+      });
     } else {
-      res.status(404).json({ success: false, error: "Report not found" });
+      res.status(404).json({
+        success: false,
+        error: "No matching document with isFeatured: true found in either collection",
+      });
     }
   } catch (error) {
     console.error("Delete error:", error);
     res.status(500).json({ success: false, error: "Internal Server Error" });
   }
 });
+
 
 
 
