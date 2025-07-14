@@ -43,6 +43,7 @@ async function run() {
   try {
     await client.connect();
     const db = client.db("products");
+    const userCollection = db.collection("users")
     const featured_Products = db.collection("featured_Products");
     const productsCollection = db.collection("productsCollection");
     const reviewsCollection = db.collection("reviewsCollection");
@@ -52,8 +53,52 @@ async function run() {
 
 
 
+ app.post("/user", async (req, res) => {
+  const user = req.body;
+  const result = await userCollection.insertOne(user);
+  res.send({ success: true, data: result });
+});
 
 
+
+    // PUT or PATCH route to change status
+app.patch('/products/:id/status', async (req, res) => {
+  const productId = req.params.id;
+  const { status } = req.body; 
+
+  try {
+    const result = await productsCollection.updateOne(
+      { _id: new ObjectId(productId) },
+      { $set: { status: status } }
+    );
+
+    res.send(result);
+  } catch (err) {
+    console.error("Status update error:", err);
+    res.status(500).send({ error: "Failed to update product status" });
+  }
+});
+
+    
+    
+    
+    
+    // PATCH route to mark a product as featured
+app.patch('/products/:id/feature', async (req, res) => {
+  const productId = req.params.id;
+
+  try {
+    const result = await productsCollection.updateOne(
+      { _id: new ObjectId(productId) },
+      { $set: { isFeatured: true } }
+    );
+
+    res.send(result);
+  } catch (err) {
+    console.error("Feature update error:", err);
+    res.status(500).send({ error: "Failed to mark product as featured" });
+  }
+});
 
 
 
@@ -107,14 +152,15 @@ async function run() {
     });
 
     // add-products data
+
     app.post("/add_products_data", async (req, res) => {
       try {
         const product = req.body;
 
         product.status = "pending";
         product.upvotes = 0;
+        product.isFeatured = false;
 
-        console.log(product);
         const result = await productsCollection.insertOne(product);
         res.send(result);
       } catch (err) {
