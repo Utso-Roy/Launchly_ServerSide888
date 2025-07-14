@@ -3,7 +3,13 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const admin = require("firebase-admin");
+var serviceAccount = require("./serviceAccountKey.json");
 
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -20,6 +26,24 @@ const client = new MongoClient(process.env.MONGODB_URI, {
   },
 });
 
+const verifyJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized access" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(403).json({ message: "Forbidden access" });
+
+    req.user = decoded; 
+    next();
+  });
+};
+
+
 async function run() {
   try {
     await client.connect();
@@ -27,7 +51,9 @@ async function run() {
     const featured_Products = db.collection("featured_Products");
     const productsCollection = db.collection("productsCollection");
     const reviewsCollection = db.collection("reviewsCollection");
-    const reportedProductsCollection = db.collection("reportedProductsCollection")
+    const reportedProductsCollection = db.collection(
+      "reportedProductsCollection"
+    );
 
     // All Products Route
     app.get("/all_products", async (req, res) => {
@@ -67,7 +93,16 @@ async function run() {
         res.status(500).send({ message: "Failed to fetch trending products" });
       }
     });
-    //
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+
+      const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
+      console.log(" JWT issued for:", user.email);
+      console.log(" Token:", token);
+
+      res.send({ token });
+    });
 
     // add-products data
     app.post("/add_products_data", async (req, res) => {
@@ -87,15 +122,27 @@ async function run() {
     });
     // get products
 
-    app.get("/add_products_data", async (req, res) => {
-      try {
-        const getProducts = await productsCollection.find({}).toArray();
-        res.send(getProducts);
-      } catch (error) {
-        console.error("Error getting products:", error);
-        res.status(500).send({ message: "Server Error", error: error.message });
-      }
-    });
+  app.get("/add_products_data/:email", verifyJWT, async (req, res) => {
+  const decodedEmail = req.user.email;
+    const paramEmail = req.params.email;
+
+  if (decodedEmail !== paramEmail) {
+    return res.status(403).json({ message: "Forbidden - Email mismatch" });
+  }
+
+  try {
+    const userProducts = await productsCollection
+      .find({ "data.ownerEmail": paramEmail }) 
+      .toArray();
+    res.send(userProducts);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch data" });
+  }
+});
+
+    
+    
+    
 
     // DELETE a product by ID
 
@@ -150,11 +197,8 @@ async function run() {
       }
     });
 
-
     //reported products
-    
-    
-    
+
     app.post("/reported", async (req, res) => {
       try {
         const review = req.body;
@@ -167,41 +211,44 @@ async function run() {
       }
     });
 
+    //  delete route
+    app.delete("/reported", async (req, res) => {
+      try {
+        // Step 1: Delete from reportedProductsCollection where isFeatured: true
+        const reportedDeleteResult = await reportedProductsCollection.deleteOne(
+          { isFeatured: true }
+        );
 
+        // Step 2: Delete from featured_Products where isFeatured: true
+        const productDeleteResult = await featured_Products.deleteOne({
+          isFeatured: true,
+        });
 
-//  delete route
-app.delete("/reported", async (req, res) => {
-  try {
-    // Step 1: Delete from reportedProductsCollection where isFeatured: true
-    const reportedDeleteResult = await reportedProductsCollection.deleteOne({ isFeatured: true });
+        const success =
+          reportedDeleteResult.deletedCount > 0 ||
+          productDeleteResult.deletedCount > 0;
 
-    // Step 2: Delete from featured_Products where isFeatured: true
-    const productDeleteResult = await featured_Products.deleteOne({ isFeatured: true });
-
-    const success =
-      reportedDeleteResult.deletedCount > 0 || productDeleteResult.deletedCount > 0;
-
-    if (success) {
-      res.json({
-        success: true,
-        message: "Deleted from one or both collections based on isFeatured",
-        reportedDeleted: reportedDeleteResult.deletedCount,
-        featuredDeleted: productDeleteResult.deletedCount,
-      });
-    } else {
-      res.status(404).json({
-        success: false,
-        error: "No matching document with isFeatured: true found in either collection",
-      });
-    }
-  } catch (error) {
-    console.error("Delete error:", error);
-    res.status(500).json({ success: false, error: "Internal Server Error" });
-  }
-});
-
-
-
+        if (success) {
+          res.json({
+            success: true,
+            message: "Deleted from one or both collections based on isFeatured",
+            reportedDeleted: reportedDeleteResult.deletedCount,
+            featuredDeleted: productDeleteResult.deletedCount,
+          });
+        } else {
+          res.status(404).json({
+            success: false,
+            error:
+              "No matching document with isFeatured: true found in either collection",
+          });
+        }
+      } catch (error) {
+        console.error("Delete error:", error);
+        res
+          .status(500)
+          .json({ success: false, error: "Internal Server Error" });
+      }
+    });
 
     app.get("/reported", async (req, res) => {
       try {
@@ -212,11 +259,6 @@ app.delete("/reported", async (req, res) => {
         res.status(500).send({ message: "Server Error", error: error.message });
       }
     });
-
-
-
-
-
 
     // Upvote Route
     app.patch("/featured_products/upvote/:id", async (req, res) => {
