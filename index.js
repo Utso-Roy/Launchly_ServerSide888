@@ -3,12 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
-const admin = require("firebase-admin");
-var serviceAccount = require("./serviceAccountKey.json");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
 const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -54,6 +49,13 @@ async function run() {
     const reportedProductsCollection = db.collection(
       "reportedProductsCollection"
     );
+
+
+
+
+
+
+
 
     // All Products Route
     app.get("/all_products", async (req, res) => {
@@ -196,6 +198,24 @@ async function run() {
         res.status(500).send({ error: "Failed to insert review" });
       }
     });
+
+
+
+// reviews fetch by productId
+
+
+app.get('/reviews/product', async (req, res) => {
+  try {
+  
+    const reviews = await reviewsCollection.find().toArray();
+
+    res.send(reviews);
+  } catch (err) {
+    console.error("Error fetching reviews by name:", err);
+    res.status(500).send({ error: "Failed to fetch reviews" });
+  }
+});
+
 
     //reported products
 
