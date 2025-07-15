@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
+const stripe = require('stripe')(process.env.STRIPE_KEY);
 
 const jwt = require("jsonwebtoken");
 const app = express();
@@ -50,16 +51,67 @@ async function run() {
     const reportedProductsCollection = db.collection(
       "reportedProductsCollection"
     );
+    // const myProfileCollection = db.collection('myProfileCollection')
 
+app.post('/create-payment-intent', async (req, res) => {
+  try {
+    const { amount } = req.body;
 
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
- app.post("/user", async (req, res) => {
+    res.send({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    console.error("Payment Intent Error:", error);
+    res.status(500).send({ error: error.message });
+  }
+});
+
+    
+
+app.post("/user", async (req, res) => {
   const user = req.body;
+  user.role = "user";
+  user.createdAt = Date.now();
+  user.lastLogin = Date.now();
+
+  const query = { email: user.email };
+  console.log("Email", query)
+
+  const alreadyExist = await userCollection.findOne(query);
+  if (!!alreadyExist) {
+    const result1 = await userCollection.updateOne(query, {
+      $set: { lastLogin: Date.now() },
+    });
+    return res.send({ success: true, updated: true, result1 });
+  }
+
   const result = await userCollection.insertOne(user);
-  res.send({ success: true, data: result });
+  res.send({ success: true, created: true, data: result });
+});
+
+  
+      
+
+
+  
+    
+app.get("/users/:email", async (req, res) => {
+  const email = req.params.email;
+  const user = await userCollection.findOne({ email });
+  res.send(user);
 });
 
 
+
+    
+    
+    
 
     // PUT or PATCH route to change status
 app.patch('/products/:id/status', async (req, res) => {
@@ -120,15 +172,6 @@ app.patch('/products/:id/status', async (req, res) => {
       }
     });
 
-    
-    
-    
-    
-    
-    
-    
-
-    
     
     
     // get all isFeaturedProducts - true
@@ -273,8 +316,7 @@ app.get("/all_products", async (req, res) => {
       const user = req.body;
 
       const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
-      console.log(" JWT issued for:", user.email);
-      console.log(" Token:", token);
+     
 
       res.send({ token });
     });
