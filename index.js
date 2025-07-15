@@ -80,10 +80,75 @@ app.patch('/products/:id/status', async (req, res) => {
 });
 
     
+
+
+
+
     
+    
+    
+    // PATCH route to upvote a product
+
+ app.patch("/upvote/:id", async (req, res) => {
+      try {
+        const productId = req.params.id;
+        const { userId } = req.body;
+
+        const query = { _id: new ObjectId(productId) };
+
+        const product = await productsCollection.findOne(query);
+
+        if (!product) {
+          return res.status(404).json({ message: "Product not found" });
+        }
+
+        if (product.upvotedUsers?.includes(userId)) {
+          return res.status(400).json({ message: "Already voted" });
+        }
+
+        const result = await productsCollection.updateOne(query, {
+          $inc: {
+            upvotes : 1,
+          },
+          $push: { upvotedUsers: userId },
+        });
+
+        res.send({ success: true, updated: result.modifiedCount > 0 });
+      } catch (err) {
+        console.error("Upvote error:", err);
+        res.status(500).json({ message: "Upvote failed" });
+      }
+    });
+
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    // get all isFeaturedProducts - true
+    
+  app.get("/featured", async (req, res) => {
+  try {
+    const featuredProducts = await productsCollection.find({ 
+isFeatured : true }).sort({ createdAt: -1 }).limit(4).toArray();
+    res.json(featuredProducts);
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+    
+
     
     
     // PATCH route to mark a product as featured
+
+
 app.patch('/products/:id/feature', async (req, res) => {
   const productId = req.params.id;
 
@@ -160,6 +225,7 @@ app.patch('/products/:id/feature', async (req, res) => {
         product.status = "pending";
         product.upvotes = 0;
         product.isFeatured = false;
+       product.upvotedUsers = ["uid1", "uid2"]
 
         const result = await productsCollection.insertOne(product);
         res.send(result);
@@ -187,6 +253,8 @@ app.patch('/products/:id/feature', async (req, res) => {
     res.status(500).json({ message: "Failed to fetch data" });
   }
 });
+
+
 
     
     
