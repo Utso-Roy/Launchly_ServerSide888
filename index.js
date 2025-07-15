@@ -146,6 +146,28 @@ isFeatured : true }).sort({ createdAt: -1 }).limit(4).toArray();
 
     
     
+    // GET Single Product by ID
+    
+app.get("/product/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const query = { _id: new ObjectId(id) };
+    const product = await productsCollection.findOne(query);
+
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    res.json({ success: true, product });
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
+    
+    
     // PATCH route to mark a product as featured
 
 
@@ -168,15 +190,56 @@ app.patch('/products/:id/feature', async (req, res) => {
 
 
     // All Products Route
-    app.get("/all_products", async (req, res) => {
-      try {
-        const result = await featured_Products.find().toArray();
-        res.send(result);
-      } catch (err) {
-        console.error("Error fetching all_products:", err);
-        res.status(500).send({ message: "Failed to fetch all products" });
-      }
+    // app.get("/all_products", async (req, res) => {
+    //   try {
+    //     const result = await featured_Products.find().toArray();
+    //     res.send(result);
+    //   } catch (err) {
+    //     console.error("Error fetching all_products:", err);
+    //     res.status(500).send({ message: "Failed to fetch all products" });
+    //   }
+    // });
+
+
+
+
+
+//pagination 
+
+app.get("/all_products", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const skip = (page - 1) * limit;
+
+    const result = await featured_Products
+      .find()
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    const total = await featured_Products.estimatedDocumentCount();
+
+    res.send({
+      success: true,
+      total,
+      page,
+      limit,
+      products: result,
     });
+  } catch (err) {
+    console.error("Error fetching all_products:", err);
+    res.status(500).send({ message: "Failed to fetch all products" });
+  }
+});
+
+
+
+
+
+
+
+
 
     // Featured Products Route
     app.get("/featured_products", async (req, res) => {
@@ -243,7 +306,6 @@ app.patch('/products/:id/feature', async (req, res) => {
   if (decodedEmail !== paramEmail) {
     return res.status(403).json({ message: "Forbidden - Email mismatch" });
   }
-
   try {
     const userProducts = await productsCollection
       .find({ "data.ownerEmail": paramEmail }) 
