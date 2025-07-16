@@ -40,6 +40,23 @@ const verifyJWT = (req, res, next) => {
 };
 
 
+
+// // Moderator
+// const onlyModerator = (req, res, next) => {
+//   const role = req.user?.role;
+//   if (role === "moderator" || role === "admin") {
+//     return next();
+//   }
+//   return res.status(403).json({ message: "Moderators only" });
+// };
+
+// // Admin‑
+// const onlyAdmin = (req, res, next) => {
+//   if (req.user?.role === "admin") return next();
+//   return res.status(403).json({ message: "Admins only" });
+// };
+
+
 async function run() {
   try {
     await client.connect();
@@ -48,11 +65,8 @@ async function run() {
     const featured_Products = db.collection("featured_Products");
     const productsCollection = db.collection("productsCollection");
     const reviewsCollection = db.collection("reviewsCollection");
-    const reportedProductsCollection = db.collection(
-      "reportedProductsCollection"
-    );
-    // const myProfileCollection = db.collection('myProfileCollection')
-
+    const reportedProductsCollection = db.collection("reportedProductsCollection");
+    const couponCollection = db.collection('couponCollection') 
 app.post('/create-payment-intent', async (req, res) => {
   try {
     const { amount } = req.body;
@@ -265,19 +279,6 @@ app.patch('/products/:id/feature', async (req, res) => {
 
 
 
-    // All Products Route
-    // app.get("/all_products", async (req, res) => {
-    //   try {
-    //     const result = await featured_Products.find().toArray();
-    //     res.send(result);
-    //   } catch (err) {
-    //     console.error("Error fetching all_products:", err);
-    //     res.status(500).send({ message: "Failed to fetch all products" });
-    //   }
-    // });
-
-
-
 
 
 //pagination 
@@ -311,6 +312,14 @@ app.get("/all_products", async (req, res) => {
 
 
 
+    app.get('/totalVotesProducts', async (req, res) => {
+      
+      const totalProduct = await featured_Products.find({}).toArray()
+      res.send(totalProduct)
+
+
+
+    })
 
 
 
@@ -345,14 +354,42 @@ app.get("/all_products", async (req, res) => {
       }
     });
 
-    app.post("/jwt", (req, res) => {
-      const user = req.body;
+    // app.post("/jwt", (req, res) => {
+    //   const user = req.body;
 
-      const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
-     
+    //   const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-      res.send({ token });
-    });
+    //   res.send({ token });
+    // });
+
+
+
+app.post("/jwt", async (req, res) => {
+  const { email } = req.body;
+
+  const user = await userCollection.findOne({ email });
+
+  if (!user) {
+    return res.status(401).send({ message: "User not found" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: user.email,
+      role: user.role, 
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  res.send({ token });
+});
+
+
+
+
+
+
 
     // add-products data
 
@@ -372,25 +409,96 @@ app.get("/all_products", async (req, res) => {
         res.status(500).send({ error: "Failed to insert product" });
       }
     });
-    // get products
+  
 
-  app.get("/add_products_data/:email", verifyJWT, async (req, res) => {
-  const decodedEmail = req.user.email;
-    const paramEmail = req.params.email;
+    
+    app.get("/add_products_data/:email",  async (req, res) => {
+  const paramEmail = req.params.email;
 
-  if (decodedEmail !== paramEmail) {
-    return res.status(403).json({ message: "Forbidden - Email mismatch" });
-  }
   try {
     const userProducts = await productsCollection
-      .find({ "data.ownerEmail": paramEmail }) 
+      .find({ "data.ownerEmail": paramEmail })
       .toArray();
-    res.send(userProducts);
+
+    res.status(200).json(userProducts);
   } catch (err) {
+    console.error("Error fetching products:", err);
     res.status(500).json({ message: "Failed to fetch data" });
   }
 });
 
+
+
+    // secure route with verifyJWT
+app.get("/all_pending_products", async (req, res) => {
+  try {
+    const pendingProducts = await productsCollection
+      .find({status: "pending" })
+      .toArray();
+
+    res.status(200).json(pendingProducts);
+  } catch (err) {
+    console.error("Error fetching pending products:", err);
+    res.status(500).json({ message: "Failed to fetch pending products" });
+  }
+});
+    
+    // get status accept
+    
+app.get("/all_Accepted_products", async (req, res) => {
+  try {
+    const pendingProducts = await productsCollection
+      .find({status: "Accepted" })
+      .toArray();
+
+    res.status(200).json(pendingProducts);
+  } catch (err) {
+    console.error("Error fetching pending products:", err);
+    res.status(500).json({ message: "Failed to fetch pending products" });
+  }
+});
+
+    //post coupons
+    
+       app.post("/coupons", async (req, res) => {
+      const coupon = req.body;
+      const result = await couponCollection.insertOne(coupon);
+      res.send(result);
+    });
+
+//get coupons
+      app.get("/coupons", async (req, res) => {
+      const coupons = await couponCollection.find().toArray();
+      res.send(coupons);
+    });
+
+    //delete coupons 
+    
+      app.delete("/coupons/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await couponCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+    
+// coupons patch data 
+      app.put("/coupons/:id", async (req, res) => {
+      const { id } = req.params;
+      const updatedData = req.body;
+
+      const result = await couponCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedData }
+      );
+
+      res.send(result);
+    });
+
+
+
+    
+
+
+    
 
 
     
