@@ -493,9 +493,16 @@ app.get("/all_Accepted_products", async (req, res) => {
       res.send(result);
     });
 
+//coupon valid 
 
+    app.get('/valid-coupons', async (req, res) => {
+  const today = new Date().toISOString().split("T")[0];
+  const validCoupons = await couponCollection.find({
+    expiryDate: { $gte: today }
+  }).toArray();
+  res.send(validCoupons);
+});
 
-    
 
 
     
