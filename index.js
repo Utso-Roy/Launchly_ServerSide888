@@ -94,9 +94,42 @@ app.post("/user", async (req, res) => {
   const result = await userCollection.insertOne(user);
   res.send({ success: true, created: true, data: result });
 });
+    //get manage user data 
+    
+    app.get('/mangeUser', async (req, res) => {
+    
+      const result = await userCollection.find({}).toArray()
 
-  
+      if (!result)
+      {
+        res.status(404).send({error:"user not found"})
+      }
+      res.send(result)
+
+  })
       
+    
+    
+    // PATCH make admin
+app.patch('/users/admin/:id', async (req, res) => {
+  const id = req.params.id;
+  const result = await userCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { role: "admin" } }
+  );
+  res.send(result);
+});
+
+// PATCH make moderator
+app.patch('/users/moderator/:id', async (req, res) => {
+  const id = req.params.id;
+  const result = await userCollection.updateOne(
+    { _id: new ObjectId(id) },
+    { $set: { role: "moderator" } }
+  );
+  res.send(result);
+});
+
 
 
   
