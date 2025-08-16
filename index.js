@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
-const stripe = require('stripe')(process.env.STRIPE_KEY);
+const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 const jwt = require("jsonwebtoken");
 const app = express();
@@ -34,161 +34,119 @@ const verifyJWT = (req, res, next) => {
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) return res.status(403).json({ message: "Forbidden access" });
 
-    req.user = decoded; 
+    req.user = decoded;
     next();
   });
 };
 
-
-
-// // Moderator
-// const onlyModerator = (req, res, next) => {
-//   const role = req.user?.role;
-//   if (role === "moderator" || role === "admin") {
-//     return next();
-//   }
-//   return res.status(403).json({ message: "Moderators only" });
-// };
-
-// // Admin‑
-// const onlyAdmin = (req, res, next) => {
-//   if (req.user?.role === "admin") return next();
-//   return res.status(403).json({ message: "Admins only" });
-// };
-
-
 async function run() {
   try {
-    await client.connect();
     const db = client.db("products");
-    const userCollection = db.collection("users")
+    const userCollection = db.collection("users");
     const featured_Products = db.collection("featured_Products");
     const productsCollection = db.collection("productsCollection");
     const reviewsCollection = db.collection("reviewsCollection");
-    const reportedProductsCollection = db.collection("reportedProductsCollection");
-    const couponCollection = db.collection('couponCollection') 
-app.post('/create-payment-intent', async (req, res) => {
-  try {
-    const { amount } = req.body;
+    const reportedProductsCollection = db.collection(
+      "reportedProductsCollection"
+    );
+    const couponCollection = db.collection("couponCollection");
+    app.post("/create-payment-intent", async (req, res) => {
+      try {
+        const { amount } = req.body;
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount,
-      currency: 'usd',
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount,
+          currency: "usd",
+          automatic_payment_methods: {
+            enabled: true,
+          },
+        });
 
-    res.send({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    console.error("Payment Intent Error:", error);
-    res.status(500).send({ error: error.message });
-  }
-});
-
-    
-
-app.post("/user", async (req, res) => {
-  const user = req.body;
-  user.role = "user";
-  user.createdAt = Date.now();
-  user.lastLogin = Date.now();
-
-  const query = { email: user.email };
-  console.log("Email", query)
-
-  const alreadyExist = await userCollection.findOne(query);
-  if (!!alreadyExist) {
-    const result1 = await userCollection.updateOne(query, {
-      $set: { lastLogin: Date.now() },
-    });
-    return res.send({ success: true, updated: true, result1 });
-  }
-
-  const result = await userCollection.insertOne(user);
-  res.send({ success: true, created: true, data: result });
-});
-    //get manage user data 
-    
-    app.get('/mangeUser', async (req, res) => {
-    
-      const result = await userCollection.find({}).toArray()
-
-      if (!result)
-      {
-        res.status(404).send({error:"user not found"})
+        res.send({ clientSecret: paymentIntent.client_secret });
+      } catch (error) {
+        console.error("Payment Intent Error:", error);
+        res.status(500).send({ error: error.message });
       }
-      res.send(result)
+    });
 
-  })
-      
-    
-    
+    app.post("/user", async (req, res) => {
+      const user = req.body;
+      user.role = "user";
+      user.createdAt = Date.now();
+      user.lastLogin = Date.now();
+
+      const query = { email: user.email };
+      console.log("Email", query);
+
+      const alreadyExist = await userCollection.findOne(query);
+      if (!!alreadyExist) {
+        const result1 = await userCollection.updateOne(query, {
+          $set: { lastLogin: Date.now() },
+        });
+        return res.send({ success: true, updated: true, result1 });
+      }
+
+      const result = await userCollection.insertOne(user);
+      res.send({ success: true, created: true, data: result });
+    });
+    //get manage user data
+
+    app.get("/mangeUser", async (req, res) => {
+      const result = await userCollection.find({}).toArray();
+
+      if (!result) {
+        res.status(404).send({ error: "user not found" });
+      }
+      res.send(result);
+    });
+
     // PATCH make admin
-app.patch('/users/admin/:id', async (req, res) => {
-  const id = req.params.id;
-  const result = await userCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { role: "admin" } }
-  );
-  res.send(result);
-});
+    app.patch("/users/admin/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await userCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { role: "admin" } }
+      );
+      res.send(result);
+    });
 
-// PATCH make moderator
-app.patch('/users/moderator/:id', async (req, res) => {
-  const id = req.params.id;
-  const result = await userCollection.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { role: "moderator" } }
-  );
-  res.send(result);
-});
+    // PATCH make moderator
+    app.patch("/users/moderator/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await userCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { role: "moderator" } }
+      );
+      res.send(result);
+    });
 
-
-
-  
-    
-app.get("/users/:email", async (req, res) => {
-  const email = req.params.email;
-  const user = await userCollection.findOne({ email });
-  res.send(user);
-});
-
-
-
-    
-    
-    
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const user = await userCollection.findOne({ email });
+      res.send(user);
+    });
 
     // PUT or PATCH route to change status
-app.patch('/products/:id/status', async (req, res) => {
-  const productId = req.params.id;
-  const { status } = req.body; 
+    app.patch("/products/:id/status", async (req, res) => {
+      const productId = req.params.id;
+      const { status } = req.body;
 
-  try {
-    const result = await productsCollection.updateOne(
-      { _id: new ObjectId(productId) },
-      { $set: { status: status } }
-    );
+      try {
+        const result = await productsCollection.updateOne(
+          { _id: new ObjectId(productId) },
+          { $set: { status: status } }
+        );
 
-    res.send(result);
-  } catch (err) {
-    console.error("Status update error:", err);
-    res.status(500).send({ error: "Failed to update product status" });
-  }
-});
+        res.send(result);
+      } catch (err) {
+        console.error("Status update error:", err);
+        res.status(500).send({ error: "Failed to update product status" });
+      }
+    });
 
-    
-
-
-
-
-    
-    
-    
     // PATCH route to upvote a product
 
- app.patch("/upvote/:id", async (req, res) => {
+    app.patch("/upvote/:id", async (req, res) => {
       try {
         const productId = req.params.id;
         const { userId } = req.body;
@@ -207,7 +165,7 @@ app.patch('/products/:id/status', async (req, res) => {
 
         const result = await productsCollection.updateOne(query, {
           $inc: {
-            upvotes : 1,
+            upvotes: 1,
           },
           $push: { upvotedUsers: userId },
         });
@@ -219,112 +177,96 @@ app.patch('/products/:id/status', async (req, res) => {
       }
     });
 
-    
-    
     // get all isFeaturedProducts - true
-    
-  app.get("/featured", async (req, res) => {
-  try {
-    const featuredProducts = await productsCollection.find({ 
-isFeatured : true }).sort({ createdAt: -1 }).limit(4).toArray();
-    res.json(featuredProducts);
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-});
-    
 
-    
-    
+    app.get("/featured", async (req, res) => {
+      try {
+        const featuredProducts = await productsCollection
+          .find({
+            isFeatured: true,
+          })
+          .sort({ createdAt: -1 })
+          .limit(4)
+          .toArray();
+        res.json(featuredProducts);
+      } catch (error) {
+        res.status(500).json({ success: false, message: "Server Error" });
+      }
+    });
+
     // GET Single Product by ID
-    
-app.get("/product/:id", async (req, res) => {
-  const { id } = req.params;
 
-  try {
-    const query = { _id: new ObjectId(id) };
-    const product = await productsCollection.findOne(query);
+    app.get("/product/:id", async (req, res) => {
+      const { id } = req.params;
 
-    if (!product) {
-      return res.status(404).json({ success: false, message: "Product not found" });
-    }
+      try {
+        const query = { _id: new ObjectId(id) };
+        const product = await productsCollection.findOne(query);
 
-    res.json({ success: true, product });
-  } catch (error) {
-    console.error("Error fetching product:", error);
-    res.status(500).json({ success: false, message: "Server Error" });
-  }
-});
+        if (!product) {
+          return res
+            .status(404)
+            .json({ success: false, message: "Product not found" });
+        }
 
-    
-    
+        res.json({ success: true, product });
+      } catch (error) {
+        console.error("Error fetching product:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+      }
+    });
+
     // PATCH route to mark a product as featured
 
+    app.patch("/products/:id/feature", async (req, res) => {
+      const productId = req.params.id;
 
-app.patch('/products/:id/feature', async (req, res) => {
-  const productId = req.params.id;
+      try {
+        const result = await productsCollection.updateOne(
+          { _id: new ObjectId(productId) },
+          { $set: { isFeatured: true } }
+        );
 
-  try {
-    const result = await productsCollection.updateOne(
-      { _id: new ObjectId(productId) },
-      { $set: { isFeatured: true } }
-    );
-
-    res.send(result);
-  } catch (err) {
-    console.error("Feature update error:", err);
-    res.status(500).send({ error: "Failed to mark product as featured" });
-  }
-});
-
-
-
-
-
-//pagination 
-
-app.get("/all_products", async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 6;
-    const skip = (page - 1) * limit;
-
-    const result = await featured_Products
-      .find()
-      .skip(skip)
-      .limit(limit)
-      .toArray();
-
-    const total = await featured_Products.estimatedDocumentCount();
-
-    res.send({
-      success: true,
-      total,
-      page,
-      limit,
-      products: result,
+        res.send(result);
+      } catch (err) {
+        console.error("Feature update error:", err);
+        res.status(500).send({ error: "Failed to mark product as featured" });
+      }
     });
-  } catch (err) {
-    console.error("Error fetching all_products:", err);
-    res.status(500).send({ message: "Failed to fetch all products" });
-  }
-});
 
+    //pagination
 
+    app.get("/all_products", async (req, res) => {
+      try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 6;
+        const skip = (page - 1) * limit;
 
-    app.get('/totalVotesProducts', async (req, res) => {
-      
-      const totalProduct = await featured_Products.find({}).toArray()
-      res.send(totalProduct)
+        const result = await featured_Products
+          .find()
+          .skip(skip)
+          .limit(limit)
+          .toArray();
 
+        const total = await featured_Products.estimatedDocumentCount();
 
+        res.send({
+          success: true,
+          total,
+          page,
+          limit,
+          products: result,
+        });
+      } catch (err) {
+        console.error("Error fetching all_products:", err);
+        res.status(500).send({ message: "Failed to fetch all products" });
+      }
+    });
 
-    })
-
-
-
-
-
+    app.get("/totalVotesProducts", async (req, res) => {
+      const totalProduct = await featured_Products.find({}).toArray();
+      res.send(totalProduct);
+    });
 
     // Featured Products Route
     app.get("/featured_products", async (req, res) => {
@@ -354,42 +296,26 @@ app.get("/all_products", async (req, res) => {
       }
     });
 
-    // app.post("/jwt", (req, res) => {
-    //   const user = req.body;
+    app.post("/jwt", async (req, res) => {
+      const { email } = req.body;
 
-    //   const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "7d" });
+      const user = await userCollection.findOne({ email });
 
-    //   res.send({ token });
-    // });
+      if (!user) {
+        return res.status(401).send({ message: "User not found" });
+      }
 
+      const token = jwt.sign(
+        {
+          email: user.email,
+          role: user.role,
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
-
-app.post("/jwt", async (req, res) => {
-  const { email } = req.body;
-
-  const user = await userCollection.findOne({ email });
-
-  if (!user) {
-    return res.status(401).send({ message: "User not found" });
-  }
-
-  const token = jwt.sign(
-    {
-      email: user.email,
-      role: user.role, 
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-
-  res.send({ token });
-});
-
-
-
-
-
-
+      res.send({ token });
+    });
 
     // add-products data
 
@@ -400,7 +326,7 @@ app.post("/jwt", async (req, res) => {
         product.status = "pending";
         product.upvotes = 0;
         product.isFeatured = false;
-       product.upvotedUsers = ["uid1", "uid2"]
+        product.upvotedUsers = ["uid1", "uid2"];
 
         const result = await productsCollection.insertOne(product);
         res.send(result);
@@ -409,79 +335,77 @@ app.post("/jwt", async (req, res) => {
         res.status(500).send({ error: "Failed to insert product" });
       }
     });
-  
 
-    
-    app.get("/add_products_data/:email",  async (req, res) => {
-  const paramEmail = req.params.email;
+    app.get("/add_products_data/:email", async (req, res) => {
+      const paramEmail = req.params.email;
 
-  try {
-    const userProducts = await productsCollection
-      .find({ "data.ownerEmail": paramEmail })
-      .toArray();
+      try {
+        const userProducts = await productsCollection
+          .find({ "data.ownerEmail": paramEmail })
+          .toArray();
 
-    res.status(200).json(userProducts);
-  } catch (err) {
-    console.error("Error fetching products:", err);
-    res.status(500).json({ message: "Failed to fetch data" });
-  }
-});
-
-
+        res.status(200).json(userProducts);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        res.status(500).json({ message: "Failed to fetch data" });
+      }
+    });
 
     // secure route with verifyJWT
-app.get("/all_pending_products", async (req, res) => {
-  try {
-    const pendingProducts = await productsCollection
-      .find({status: "pending" })
-      .toArray();
+    app.get("/all_pending_products", async (req, res) => {
+      try {
+        const pendingProducts = await productsCollection
+          .find({ status: "pending" })
+          .toArray();
 
-    res.status(200).json(pendingProducts);
-  } catch (err) {
-    console.error("Error fetching pending products:", err);
-    res.status(500).json({ message: "Failed to fetch pending products" });
-  }
-});
-    
+        res.status(200).json(pendingProducts);
+      } catch (err) {
+        console.error("Error fetching pending products:", err);
+        res.status(500).json({ message: "Failed to fetch pending products" });
+      }
+    });
+
     // get status accept
-    
-app.get("/all_Accepted_products", async (req, res) => {
-  try {
-    const pendingProducts = await productsCollection
-      .find({status: "Accepted" })
-      .toArray();
 
-    res.status(200).json(pendingProducts);
-  } catch (err) {
-    console.error("Error fetching pending products:", err);
-    res.status(500).json({ message: "Failed to fetch pending products" });
-  }
-});
+    app.get("/all_Accepted_products", async (req, res) => {
+      try {
+        const pendingProducts = await productsCollection
+          .find({ status: "Accepted" })
+          .toArray();
+
+        res.status(200).json(pendingProducts);
+      } catch (err) {
+        console.error("Error fetching pending products:", err);
+        res.status(500).json({ message: "Failed to fetch pending products" });
+      }
+    });
 
     //post coupons
-    
-       app.post("/coupons", async (req, res) => {
+
+    app.post("/coupons", async (req, res) => {
       const coupon = req.body;
       const result = await couponCollection.insertOne(coupon);
       res.send(result);
     });
 
-//get coupons
-      app.get("/coupons", async (req, res) => {
+    //get coupons
+    app.get("/coupons", async (req, res) => {
       const coupons = await couponCollection.find().toArray();
       res.send(coupons);
     });
 
-    //delete coupons 
-    
-      app.delete("/coupons/:id", async (req, res) => {
+    //delete coupons
+
+    app.delete("/coupons/:id", async (req, res) => {
       const { id } = req.params;
-      const result = await couponCollection.deleteOne({ _id: new ObjectId(id) });
+      const result = await couponCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
       res.send(result);
     });
-    
-// coupons patch data 
-      app.put("/coupons/:id", async (req, res) => {
+
+    // coupons patch data
+    app.put("/coupons/:id", async (req, res) => {
       const { id } = req.params;
       const updatedData = req.body;
 
@@ -493,24 +417,17 @@ app.get("/all_Accepted_products", async (req, res) => {
       res.send(result);
     });
 
-//coupon valid 
+    //coupon valid
 
-    app.get('/valid-coupons', async (req, res) => {
-  const today = new Date().toISOString().split("T")[0];
-  const validCoupons = await couponCollection.find({
-    expiryDate: { $gte: today }
-  }).toArray();
-  res.send(validCoupons);
-});
-
-
-
-    
-
-
-    
-    
-    
+    app.get("/valid-coupons", async (req, res) => {
+      const today = new Date().toISOString().split("T")[0];
+      const validCoupons = await couponCollection
+        .find({
+          expiryDate: { $gte: today },
+        })
+        .toArray();
+      res.send(validCoupons);
+    });
 
     // DELETE a product by ID
 
@@ -565,23 +482,18 @@ app.get("/all_Accepted_products", async (req, res) => {
       }
     });
 
+    // reviews fetch by productId
 
+    app.get("/reviews/product", async (req, res) => {
+      try {
+        const reviews = await reviewsCollection.find().toArray();
 
-// reviews fetch by productId
-
-
-app.get('/reviews/product', async (req, res) => {
-  try {
-  
-    const reviews = await reviewsCollection.find().toArray();
-
-    res.send(reviews);
-  } catch (err) {
-    console.error("Error fetching reviews by name:", err);
-    res.status(500).send({ error: "Failed to fetch reviews" });
-  }
-});
-
+        res.send(reviews);
+      } catch (err) {
+        console.error("Error fetching reviews by name:", err);
+        res.status(500).send({ error: "Failed to fetch reviews" });
+      }
+    });
 
     //reported products
 
