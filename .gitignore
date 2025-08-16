@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 .env
 .vercel
 "serviceAccountKey.json" 
 "serviceAccountKey.json" 
+=======
+.env
+.vercel
+"serviceAccountKey.json" 
+"serviceAccountKey.json" 
+>>>>>>> 00ef38826d5083c8a5b880555f1a30168b2d9c3c
