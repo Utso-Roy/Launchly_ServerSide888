@@ -8,6 +8,8 @@ const stripe = require("stripe")(process.env.STRIPE_KEY);
 const jwt = require("jsonwebtoken");
 const app = express();
 const port = process.env.PORT || 5000;
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 // Middleware
 app.use(cors());
